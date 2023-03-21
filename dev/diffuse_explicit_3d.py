@@ -151,7 +151,7 @@ def add(A: ti.template(), B: ti.template(), C: ti.template()):
 @ti.kernel
 def init():
     for i, j, k in ti.ndrange(nx,ny,nz):
-        if (float(i)-heat_center[0])**2 + (float(j)-heat_center[1])**2 + (float(j)-heat_center[2])**2 <= heat_radius**2:
+        if (float(i)-heat_center[0])**2 + (float(j)-heat_center[1])**2 + (float(k)-heat_center[2])**2 <= heat_radius**2:
             temp[ind(i, j, k)] = t_max # source
             temp_1[ind(i, j, k)] = t_max # source
         else:
@@ -161,7 +161,7 @@ def init():
 @ti.kernel
 def update_source():
     for i, j, k in ti.ndrange(nx,ny,nz):
-        if (float(i)-heat_center[0])**2 + (float(j)-heat_center[1])**2 + (float(j)-heat_center[2])**2 <= heat_radius**2:
+        if (float(i)-heat_center[0])**2 + (float(j)-heat_center[1])**2 + (float(k)-heat_center[2])**2 <= heat_radius**2:
             temp_1_sm[ind(i, j, k)] = t_max
 
 
