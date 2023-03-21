@@ -1,0 +1,7 @@
+taichi>=1.0.2
+pyevtk
+vtk
+pyvista
+numpy
+jpcm
+tqdm
