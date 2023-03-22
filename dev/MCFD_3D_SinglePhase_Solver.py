@@ -3,11 +3,12 @@ import numpy as np
 from pyevtk.hl import gridToVTK
 import time
 
+from FD_3D_Heat_Solver import FD_3D_Heat_Solver
 #ti.init(arch=ti.gpu, dynamic_index=False, kernel_profiler=True, print_ir=False)
 
 @ti.data_oriented
-class LB3D_Solver_Single_Phase:
-    def __init__(self, nx, ny, nz, sparse_storage = False):
+class MCFD_Solver_Single_Phase:
+    def __init__(self, nx, ny, nz, sparse_storage = False, **kwargs):
 
         self.enable_projection = True
         self.sparse_storage = sparse_storage
@@ -17,7 +18,7 @@ class LB3D_Solver_Single_Phase:
         self.niu = 0.16667
 
         self.max_v=ti.field(ti.f32,shape=())
-
+        
         #Boundary condition mode: 0=periodic, 1= fix pressure, 2=fix velocity; boundary pressure value (rho); boundary velocity value for vx,vy,vz
         self.bc_x_left, self.rho_bcxl, self.vx_bcxl, self.vy_bcxl, self.vz_bcxl = 0, 1.0, 0.0e-5, 0.0, 0.0  #Boundary x-axis left side
         self.bc_x_right, self.rho_bcxr, self.vx_bcxr, self.vy_bcxr, self.vz_bcxr = 0, 1.0, 0.0, 0.0, 0.0  #Boundary x-axis left side
@@ -112,6 +113,8 @@ class LB3D_Solver_Single_Phase:
         self.y = np.linspace(0, ny, ny)
         self.z = np.linspace(0, nz, nz)
         #X, Y, Z = np.meshgrid(self.x, self.y, self.z, indexing='ij')
+
+        self.heat_solver = FD_3D_Heat_Solver(nx,ny,nz,velocity_ref=self.v,**kwargs)
 
 
     def init_simulation(self):
@@ -468,7 +471,9 @@ class LB3D_Solver_Single_Phase:
                             "rho": np.ascontiguousarray(self.rho.to_numpy()),
                             "velocity": (   np.ascontiguousarray(self.v.to_numpy()[0:self.nx,0:self.ny,0:self.nz,0]), 
                                             np.ascontiguousarray(self.v.to_numpy()[0:self.nx,0:self.ny,0:self.nz,1]),
-                                            np.ascontiguousarray(self.v.to_numpy()[0:self.nx,0:self.ny,0:self.nz,2]))
+                                            np.ascontiguousarray(self.v.to_numpy()[0:self.nx,0:self.ny,0:self.nz,2])),
+                            "temperature": np.ascontiguousarray(self.heat_solver.temp.to_numpy().reshape((self.nx,self.ny,self.nz))),
+                            "flux*dt": np.ascontiguousarray(self.heat_solver.update.to_numpy().reshape((self.nx,self.ny,self.nz))),
                             }
             )   
 
@@ -477,6 +482,7 @@ class LB3D_Solver_Single_Phase:
         self.streaming1()
         self.Boundary_condition()
         self.streaming3()
+        self.heat_solver.cycle()
 
 
 

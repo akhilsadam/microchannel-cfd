@@ -4,17 +4,17 @@ import taichi as ti
 os.environ['TI_DEVICE_MEMORY_FRACTION'] = '0.9'
 os.environ['TI_USE_UNIFIED_MEMORY'] = '0'
 
-path = f'{os.getcwd()}/dev/Single_phase/img_ftb131.txt'
+path = f'{os.getcwd()}/img_ftb131.txt'
 
-ti.init(arch=ti.gpu, dynamic_index=False, kernel_profiler=False, print_ir=False)
-import LBM_3D_SinglePhase_Solver as lb3dsp
+ti.init(arch=ti.cuda, kernel_profiler=False, print_ir=False, advanced_optimization=True,fast_math=True)
+import MCFD_3D_SinglePhase_Solver as MCFD
 
 time_init = time.time()
 time_now = time.time()
 time_pre = time.time()             
 
 
-lb3d = lb3dsp.LB3D_Solver_Single_Phase(nx=131,ny=131,nz=131)
+lb3d = MCFD.MCFD_Solver_Single_Phase(nx=131,ny=131,nz=131, save_images=True)
 
 lb3d.init_geo(path)
 lb3d.set_bc_rho_x1(0.99)

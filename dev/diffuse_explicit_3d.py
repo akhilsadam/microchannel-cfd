@@ -27,7 +27,7 @@ nd = 3
 t_max = 300 # ti.max temperature (in Celsius)
 t_min = 0   # ti.min temperature 
 heat_center = (nx//2, ny//2, nz//2) 
-heat_radius = 1
+heat_radius = 3
 k = 50.0 # scale for rate of heat diffusion
 
 # visualization
@@ -77,10 +77,35 @@ def gradient_temp():
         z_2 = ti.max(0, z_2)
         z1 = ti.min(nz-1, z1)
         z2 = ti.min(nz-1, z2)
+        xd = 0.0
+        yd = 0.0
+        zd = 0.0
         
-        xd = (2/3)*(temp[ind(x1,j,k)] - temp[ind(x_1,j,k)]) + (1/12)*(temp[ind(x2,j,k)] - temp[ind(x_2,j,k)])
-        yd = (2/3)*(temp[ind(i,y1,k)] - temp[ind(i,y_1,k)]) + (1/12)*(temp[ind(i,y2,k)] - temp[ind(i,y_2,k)])
-        zd = (2/3)*(temp[ind(i,j,z1)] - temp[ind(i,j,z_1)]) + (1/12)*(temp[ind(i,j,z2)] - temp[ind(i,j,z_2)])
+        if i > 1 and i < nx-2:
+            xd = (2/3)*(temp[ind(x1,j,k)] - temp[ind(x_1,j,k)]) + (1/12)*(temp[ind(x2,j,k)] - temp[ind(x_2,j,k)])
+        elif i <= 1:
+            # forward difference
+            xd = temp[ind(x1,j,k)] - temp[ind(i,j,k)]
+        else:
+            # backward difference
+            xd = temp[ind(i,j,k)] - temp[ind(x_1,j,k)]
+            
+        if j > 1 and j < ny-2:
+            yd = (2/3)*(temp[ind(i,y1,k)] - temp[ind(i,y_1,k)]) + (1/12)*(temp[ind(i,y2,k)] - temp[ind(i,y_2,k)])
+        elif j <= 1:
+            # forward difference
+            yd = temp[ind(i,y1,k)] - temp[ind(i,j,k)]
+        else:
+            yd = temp[ind(i,j,k)] - temp[ind(i,y_1,k)]
+        
+        if k > 1 and k < nz-2:
+            zd = (2/3)*(temp[ind(i,j,z1)] - temp[ind(i,j,z_1)]) + (1/12)*(temp[ind(i,j,z2)] - temp[ind(i,j,z_2)])
+        elif k <= 1:
+            # forward difference
+            zd = temp[ind(i,j,z1)] - temp[ind(i,j,k)]
+        else:
+            zd = temp[ind(i,j,k)] - temp[ind(i,j,z_1)]
+            
         grad_temp[ind(i,j,k)] = ti.Vector([xd/dx, yd/dy, zd/dz])
 
 @ti.kernel
@@ -121,10 +146,33 @@ def divergence(A:ti.template(), d: ti.template(), scale:float):
         z_2 = ti.max(0, z_2)
         z1 = ti.min(nz-1, z1)
         z2 = ti.min(nz-1, z2)
+        xd = 0.0
+        yd = 0.0
+        zd = 0.0
         
-        xd = (2/3)*(A[ind(x1,j,k)][0] - A[ind(x_1,j,k)][0]) + (1/12)*(A[ind(x2,j,k)][0] - A[ind(x_2,j,k)][0])
-        yd = (2/3)*(A[ind(i,y1,k)][1] - A[ind(i,y_1,k)][1]) + (1/12)*(A[ind(i,y2,k)][1] - A[ind(i,y_2,k)][1])
-        zd = (2/3)*(A[ind(i,j,z1)][2] - A[ind(i,j,z_1)][2]) + (1/12)*(A[ind(i,j,z2)][2] - A[ind(i,j,z_2)][2])
+        if i > 1 and i < nx-2:
+            xd = (2/3)*(A[ind(x1,j,k)][0] - A[ind(x_1,j,k)][0]) + (1/12)*(A[ind(x2,j,k)][0] - A[ind(x_2,j,k)][0])
+        elif i <= 1:
+            xd = (A[ind(x1,j,k)][0] - A[ind(i,j,k)][0])
+        else:
+            xd = (A[ind(i,j,k)][0] - A[ind(x_1,j,k)][0])        
+        
+        if j > 1 and j < ny-2:
+            yd = (2/3)*(A[ind(i,y1,k)][1] - A[ind(i,y_1,k)][1]) + (1/12)*(A[ind(i,y2,k)][1] - A[ind(i,y_2,k)][1])
+        elif j <= 1:
+            # forward difference
+            yd = (A[ind(i,y1,k)][1] - A[ind(i,j,k)][1])
+        else:
+            # backward difference
+            yd = (A[ind(i,j,k)][1] - A[ind(i,y_1,k)][1])
+        
+        if k > 1 and k < nz-2:
+            zd = (2/3)*(A[ind(i,j,z1)][2] - A[ind(i,j,z_1)][2]) + (1/12)*(A[ind(i,j,z2)][2] - A[ind(i,j,z_2)][2])
+        elif k <= 1:
+            zd = (A[ind(i,j,z1)][2] - A[ind(i,j,k)][2])
+        else:
+            zd = (A[ind(i,j,k)][2] - A[ind(i,j,z_1)][2])
+            
         d[ind(i,j,k)] += (xd/dx + yd/dy + zd/dz) * scale
 
 @ti.kernel
@@ -218,7 +266,7 @@ velocity.fill(ti.Vector([0.0, 0.0, 0.0]))
 diffusivity.fill(1.0)
 pl = pv.Plotter()
 pl.open_gif(f"images/output_3d.gif")
-for i in range(20000):
+for i in range(25000):
     
     for _ in range(substep):
         diffuse(h/substep)

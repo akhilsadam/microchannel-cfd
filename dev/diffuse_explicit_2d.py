@@ -73,9 +73,23 @@ def gradient_temp():
         y_2 = ti.max(0, y_2)
         y1 = ti.min(ny-1, y1)
         y2 = ti.min(ny-1, y2)
+        xd = 0.0
+        yd = 0.0
         
-        xd = (2/3)*(temp[ind(x1,j)] - temp[ind(x_1,j)]) + (1/12)*(temp[ind(x2,j)] - temp[ind(x_2,j)])
-        yd = (2/3)*(temp[ind(i,y1)] - temp[ind(i,y_1)]) + (1/12)*(temp[ind(i,y2)] - temp[ind(i,y_2)])
+        if i > 1 and i < nx-2:
+            xd = (2/3)*(temp[ind(x1,j)] - temp[ind(x_1,j)]) + (1/12)*(temp[ind(x2,j)] - temp[ind(x_2,j)])
+        elif i <= 1:
+            xd = (temp[ind(x1,j)] - temp[ind(i,j)])
+        else:
+            xd = (temp[ind(i,j)] - temp[ind(x_1,j)])
+            
+        if j > 1 and j < ny-2:
+            yd = (2/3)*(temp[ind(i,y1)] - temp[ind(i,y_1)]) + (1/12)*(temp[ind(i,y2)] - temp[ind(i,y_2)])
+        elif j <= 1:
+            yd = (temp[ind(i,y1)] - temp[ind(i,j)])
+        else:
+            yd = (temp[ind(i,j)] - temp[ind(i,y_1)])
+            
         grad_temp[ind(i,j)] = ti.Vector([xd/dx, yd/dy])
 
 @ti.kernel
@@ -106,9 +120,27 @@ def divergence(A:ti.template(), d: ti.template(), scale:float):
         y_2 = ti.max(0, y_2)
         y1 = ti.min(ny-1, y1)
         y2 = ti.min(ny-1, y2)
+        xd = 0.0
+        yd = 0.0
         
-        xd = (2/3)*(A[ind(x1,j)][0] - A[ind(x_1,j)][0]) + (1/12)*(A[ind(x2,j)][0] - A[ind(x_2,j)][0])
-        yd = (2/3)*(A[ind(i,y1)][1] - A[ind(i,y_1)][1]) + (1/12)*(A[ind(i,y2)][1] - A[ind(i,y_2)][1])
+        if i > 1 and i < nx-2:
+            xd = (2/3)*(A[ind(x1,j)][0] - A[ind(x_1,j)][0]) + (1/12)*(A[ind(x2,j)][0] - A[ind(x_2,j)][0])
+        elif i <= 1:
+            # forward difference
+            xd = (A[ind(x1,j)][0] - A[ind(i,j)][0])
+        else:
+            # backward difference
+            xd = (A[ind(i,j)][0] - A[ind(x_1,j)][0])
+            
+        if j > 1 and j < ny-2:
+            yd = (2/3)*(A[ind(i,y1)][1] - A[ind(i,y_1)][1]) + (1/12)*(A[ind(i,y2)][1] - A[ind(i,y_2)][1])
+        elif j <= 1:
+            # forward difference
+            yd = (A[ind(i,y1)][1] - A[ind(i,j)][1])
+        else:
+            # backward difference
+            yd = (A[ind(i,j)][1] - A[ind(i,y_1)][1])
+            
         d[ind(i,j)] += (xd/dx + yd/dy) * scale
 
 @ti.kernel
